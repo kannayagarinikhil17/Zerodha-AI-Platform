@@ -1,0 +1,6 @@
+user_id,symbol,sector,quantity,average_price,current_price
+user_1,TCS,IT,50,3200.00,3800.50
+user_1,INFY,IT,100,1400.00,1550.25
+user_1,HDFCBANK,Financials,200,1500.00,1480.00
+user_1,TATAMOTORS,Automotive,150,600.00,950.00
+user_2,RELIANCE,Energy,25,2400.00,2900.00

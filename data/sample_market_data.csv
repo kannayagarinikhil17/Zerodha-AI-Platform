@@ -1,0 +1,6 @@
+symbol,latest_price,daily_change_pct,volume,volatility_flag
+TCS,3800.50,1.2,1500000,Low
+INFY,1550.25,-0.5,2200000,Low
+HDFCBANK,1480.00,-1.5,5500000,Medium
+TATAMOTORS,950.00,3.4,8500000,High
+RELIANCE,2900.00,0.8,4100000,Medium
