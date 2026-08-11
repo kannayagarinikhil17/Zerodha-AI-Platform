@@ -4,6 +4,9 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
+# Import our new MCP Governance Layer
+from mcp_server.server import execute_mcp_tool, get_portfolio_tool_schema
+
 # Load environment variables
 load_dotenv()
 
@@ -19,12 +22,28 @@ def generate_portfolio_explanation(metrics_payload: dict) -> dict:
     """
     api_key = os.getenv("GEMINI_API_KEY")
     
+    # --- 1. MCP GOVERNANCE LAYER ---
+    try:
+        # Retrieve the allowed schema
+        mcp_schema = get_portfolio_tool_schema()
+        
+        # Execute governed data retrieval (this validates access)
+        governed_payload = execute_mcp_tool(
+            tool_name=mcp_schema["tool_name"], 
+            payload=metrics_payload 
+        )
+    except Exception as e:
+        print(f"[ERROR] MCP Governance layer blocked execution: {e}")
+        raise e
+    # -------------------------------
+    
     # Fallback response template if API is unavailable or key is missing
+    # Now using 'governed_payload' instead of the raw metrics
     fallback_response = {
-        "portfolio_summary": f"Your portfolio total value stands at ₹{metrics_payload['summary']['total_current_value']:,} with an overall return of {metrics_payload['summary']['overall_return_pct']}. Significant concentration risk is observed across key sectors.",
+        "portfolio_summary": f"Your portfolio total value stands at ₹{governed_payload.get('summary', governed_payload).get('total_current_value', 0):,} with an overall return.",
         "top_driver": "Automotive holdings generated strong overall capital returns.",
         "key_risk_alerts": [
-            f"Sector concentration alert: {alert['message']}" for alert in metrics_payload.get('concentration_risk_alerts', [])
+            f"Sector concentration alert: {alert['message']}" for alert in governed_payload.get('concentration_risk_alerts', [])
         ],
         "recommended_review_areas": [
             "Examine high-concentration sectors to mitigate sector-specific drawdown risk.",
@@ -53,10 +72,11 @@ def generate_portfolio_explanation(metrics_payload: dict) -> dict:
         5. Always return a clean, structured JSON response following the requested schema.
         """
 
+        # Using the governed_payload in the prompt
         prompt = f"""
-        Here is the deterministic analytics payload for user portfolio analysis:
+        Here is the deterministic analytics payload for user portfolio analysis (Governed via MCP):
         
-        {json.dumps(metrics_payload, indent=2)}
+        {json.dumps(governed_payload, indent=2)}
         
         Generate a complete, plain-language portfolio intelligence summary.
         """
