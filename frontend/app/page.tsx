@@ -96,8 +96,11 @@ export default function Dashboard() {
 
     try {
       const idToken = await currentUser.getIdToken(true);
+      
+      // Dynamically get the backend URL (defaults to localhost if the env variable is missing)
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
-      const response = await fetch("http://localhost:8000/api/portfolio-analysis", {
+      const response = await fetch(`${backendUrl}/api/portfolio-analysis`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
