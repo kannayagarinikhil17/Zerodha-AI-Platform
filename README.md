@@ -1,5 +1,6 @@
 # Zerodha AI Financial Intelligence Platform
-
+# DEMO VIDEO:  https://drive.google.com/file/d/1vPceD7_tXM3Q0mT8tpVJs_13bg1i5hIe/view?usp=sharing
+# LIVE APP: https://zerodha-ai-platform-5rdh.vercel.app/
 ## Executive Overview
 This repository contains the first release of the Zerodha AI Financial Intelligence Platform. It transforms raw portfolio data, market signals, and internal data into explainable, dashboard-ready portfolio insights. The architecture ensures that all AI reasoning is grounded in deterministic analytics rather than uncontrolled natural-language generation.
 
