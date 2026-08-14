@@ -6,10 +6,10 @@ import pandas as pd
 import json
 import yfinance as yf
 from google import genai 
-from ..database import get_db
-from .. import schemas
-from .. import models
-from ..auth import verify_firebase_token
+from database import get_db
+import schemas
+import models
+from auth import verify_firebase_token
 
 # Load environment variables
 load_dotenv()
