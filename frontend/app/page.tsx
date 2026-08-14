@@ -1,12 +1,23 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "../lib/firebase"; 
 import { 
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
-import { ShieldCheck, Sparkles, Plus, Trash2, ArrowLeft, TrendingUp, PieChart as PieIcon, BarChart3, LineChart as LineIcon, CheckCircle2, AlertTriangle, FileText, Upload, FileSpreadsheet, Newspaper } from 'lucide-react';
+import { 
+  ShieldCheck, Sparkles, Plus, Trash2, ArrowLeft, TrendingUp, 
+  PieChart as PieIcon, CheckCircle2, AlertTriangle, FileText, 
+  Upload, FileSpreadsheet, Newspaper, Send, CornerDownLeft
+} from 'lucide-react';
+
+interface ChatMessage {
+  id: string;
+  query: string;
+  aiData: any;
+  timestamp: string;
+}
 
 export default function Dashboard() {
   const [currentView, setCurrentView] = useState<"welcome" | "input" | "analytics" | "query_response">("welcome");
@@ -24,8 +35,21 @@ export default function Dashboard() {
   
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [aiData, setAiData] = useState<any>(null);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    if (currentView === "query_response") {
+      scrollToBottom();
+    }
+  }, [chatHistory, currentView]);
 
   const addHoldingRow = () => setHoldings([...holdings, { symbol: "", sector: "", quantity: "", average_price: "" }]);
   const removeHoldingRow = (index: number) => setHoldings(holdings.filter((_, i) => i !== index));
@@ -73,9 +97,10 @@ export default function Dashboard() {
     reader.readAsText(file);
   };
 
-  const fetchInsights = async (isNewPortfolio: boolean = false, uidOverride?: string) => {
+  const fetchInsights = async (isNewPortfolio: boolean = false, uidOverride?: string, customQuery?: string) => {
     const activeUserId = uidOverride || userId;
     const currentUser = auth.currentUser;
+    const queryToSend = customQuery !== undefined ? customQuery : userQuery;
 
     if (!currentUser) {
       setErrorMsg("Secure session expired. Please sign in again.");
@@ -96,7 +121,6 @@ export default function Dashboard() {
 
     try {
       const idToken = await currentUser.getIdToken(true);
-      
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
       const response = await fetch(`${backendUrl}/api/portfolio-analysis`, {
@@ -107,14 +131,13 @@ export default function Dashboard() {
         },
         body: JSON.stringify({ 
           user_id: activeUserId, 
-          query: userQuery,
+          query: queryToSend,
           custom_holdings: formattedHoldings,
           save_for_future: saveForFuture
         }),
       });
 
       const data = await response.json();
-      console.log("BACKEND RESPONSE:", data);
       
       if (response.status === 401) {
          setErrorMsg("Authentication Failed: Invalid Firebase Token.");
@@ -134,8 +157,16 @@ export default function Dashboard() {
 
       setAnalyticsData(data.analytics_metrics);
       setAiData(data.ai_intelligence_card);
-      
-      if (userQuery.trim() !== "") {
+
+      if (queryToSend.trim() !== "") {
+        const newMessage: ChatMessage = {
+          id: Date.now().toString(),
+          query: queryToSend,
+          aiData: data.ai_intelligence_card,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setChatHistory(prev => [...prev, newMessage]);
+        setUserQuery("");
         setCurrentView("query_response");
       } else {
         setCurrentView("analytics");
@@ -295,88 +326,145 @@ export default function Dashboard() {
   // Extract variables with fallbacks
   const { summary, sector_data, historical_chart = [], predictive_chart, live_news = [], automated_alerts = [] } = analyticsData || {};
 
-  // --- SCREEN 3: QUERY RESPONSE VIEW ---
-  if (currentView === "query_response" && aiData) {
+  // --- SCREEN 3: CONTINUOUS GEMINI AI CHAT & REPORT VIEW ---
+  if (currentView === "query_response") {
     return (
-      <div className="min-h-screen text-slate-100 p-6 md:p-10 space-y-6 font-sans bg-cover bg-center bg-fixed" style={{ backgroundImage: `linear-gradient(to bottom, rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.95)), url('https://i.pinimg.com/736x/79/68/74/7968740973b0b6dd1b4668fdae827ad7.jpg')` }}>
-        <div className="flex items-center justify-between bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-700/50 shadow-xl">
-          <button onClick={() => { setUserQuery(""); setCurrentView("analytics"); }} className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm font-semibold bg-blue-500/10 px-5 py-2.5 rounded-xl border border-blue-500/20 transition backdrop-blur-md">
-            <ArrowLeft size={18}/> Back to Main Terminal
+      <div className="min-h-screen text-slate-100 p-4 md:p-8 space-y-6 font-sans bg-cover bg-center bg-fixed flex flex-col justify-between" style={{ backgroundImage: `linear-gradient(to bottom, rgba(2, 6, 23, 0.88), rgba(2, 6, 23, 0.96)), url('https://i.pinimg.com/736x/79/68/74/7968740973b0b6dd1b4668fdae827ad7.jpg')` }}>
+        
+        {/* Sticky Header */}
+        <div className="flex items-center justify-between bg-slate-900/70 backdrop-blur-xl p-4 md:p-5 rounded-2xl border border-slate-700/50 shadow-xl sticky top-4 z-20">
+          <button onClick={() => { setUserQuery(""); setCurrentView("analytics"); }} className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm font-semibold bg-blue-500/10 px-4 py-2 rounded-xl border border-blue-500/20 transition backdrop-blur-md">
+            <ArrowLeft size={16}/> Back to Main Terminal
           </button>
-          <div className="text-right">
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Quantitative Analysis Report</p>
-            <p className="font-mono text-base text-white mt-1">{auth.currentUser?.email}</p>
+          <div className="flex items-center gap-3">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-widest hidden sm:inline">Zerodha Gemini Assistant</span>
+            <span className="font-mono text-xs text-slate-400 bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800">{auth.currentUser?.email}</span>
           </div>
         </div>
 
-        <div className="bg-slate-900/60 backdrop-blur-xl p-8 md:p-12 rounded-2xl border border-slate-700/50 shadow-2xl space-y-10">
-          <div className="border-b border-slate-700/80 pb-8">
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
-              <FileText size={20}/> Analyzed Query Parameter
-            </h2>
-            <h1 className="text-4xl md:text-5xl font-black text-white leading-tight">
-              "{aiData.query || userQuery}"
-            </h1>
-          </div>
-
-          {aiData.type === "detailed" ? (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-              <div className="lg:col-span-7 space-y-10">
-                <section>
-                  <h3 className="text-xl font-bold text-blue-400 flex items-center gap-3 mb-4"><Sparkles size={24}/> Executive Summary</h3>
-                  <p className="text-slate-200 leading-relaxed text-lg font-medium">{aiData.executive_summary}</p>
-                </section>
-                <section>
-                  <h3 className="text-xl font-bold text-rose-400 flex items-center gap-3 mb-4"><AlertTriangle size={24}/> Key Findings & Anomalies</h3>
-                  <div className="space-y-4">
-                    {aiData.key_findings?.map((point: string, idx: number) => (
-                      <div key={idx} className="flex items-start gap-4 bg-rose-950/40 p-5 rounded-xl border-l-4 border-l-rose-500 border-y border-r border-rose-900/50 shadow-md backdrop-blur-sm">
-                        <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={22}/>
-                        <p className="text-slate-200 text-base leading-relaxed">{point}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-                <section>
-                  <h3 className="text-xl font-bold text-emerald-400 flex items-center gap-3 mb-4"><CheckCircle2 size={24}/> Strategic Recommendations</h3>
-                  <div className="space-y-4">
-                    {aiData.recommendations?.map((point: string, idx: number) => (
-                      <div key={idx} className="flex items-start gap-4 bg-emerald-950/40 p-5 rounded-xl border-l-4 border-l-emerald-500 border-y border-r border-emerald-900/50 shadow-md backdrop-blur-sm">
-                        <CheckCircle2 className="text-emerald-500 shrink-0 mt-0.5" size={22}/>
-                        <p className="text-slate-200 text-base leading-relaxed">{point}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </div>
-              <div className="lg:col-span-5 space-y-8">
-                <div className="bg-slate-950/80 backdrop-blur-md p-6 rounded-2xl border border-slate-700/50 shadow-inner">
-                  <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6 text-center">Predictive Trajectory</h3>
-                  <div className="h-56">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={predictive_chart}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false}/>
-                        <XAxis dataKey="month" stroke="#94A3B8" tick={{fontSize: 12}}/>
-                        <YAxis stroke="#94A3B8" tick={{fontSize: 12}} domain={['auto', 'auto']}/>
-                        <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '8px' }}/>
-                        <Line type="monotone" dataKey="baseline" stroke="#F59E0B" strokeWidth={4} dot={false} />
-                        <Line type="monotone" dataKey="optimistic" stroke="#10B981" strokeWidth={2} strokeDasharray="4 4" dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
+        {/* Conversation Stream */}
+        <div className="space-y-8 flex-1 max-w-6xl w-full mx-auto pb-24">
+          {chatHistory.map((item, idx) => (
+            <div key={item.id || idx} className="space-y-6 animate-fadeIn">
+              
+              {/* User Query Bubble */}
+              <div className="flex justify-end">
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 md:p-5 rounded-2xl rounded-tr-none shadow-lg max-w-2xl border border-blue-400/30">
+                  <p className="text-xs text-blue-200 font-bold uppercase tracking-wider mb-1 flex items-center justify-between gap-4">
+                    <span>Your Query</span>
+                    <span className="text-[10px] opacity-75">{item.timestamp}</span>
+                  </p>
+                  <p className="text-base md:text-lg font-semibold">{item.query}</p>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <div className="bg-blue-500/10 p-4 rounded-full border border-blue-500/20 mb-6">
-                <Sparkles size={36} className="text-blue-400" />
+
+              {/* AI Report Card / Response */}
+              <div className="bg-slate-900/70 backdrop-blur-xl p-6 md:p-10 rounded-2xl border border-slate-700/60 shadow-2xl space-y-8">
+                {item.aiData?.type === "detailed" ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <div className="lg:col-span-7 space-y-6">
+                      <section>
+                        <h3 className="text-lg font-bold text-blue-400 flex items-center gap-2 mb-2"><Sparkles size={20}/> Executive Summary</h3>
+                        <p className="text-slate-200 leading-relaxed text-sm md:text-base font-medium">{item.aiData.executive_summary}</p>
+                      </section>
+                      
+                      <section>
+                        <h3 className="text-lg font-bold text-rose-400 flex items-center gap-2 mb-3"><AlertTriangle size={20}/> Key Findings & Anomalies</h3>
+                        <div className="space-y-3">
+                          {item.aiData.key_findings?.map((point: string, pIdx: number) => (
+                            <div key={pIdx} className="flex items-start gap-3 bg-rose-950/40 p-4 rounded-xl border-l-4 border-l-rose-500 border-y border-r border-rose-900/50 shadow-md">
+                              <AlertTriangle className="text-rose-400 shrink-0 mt-0.5" size={18}/>
+                              <p className="text-slate-200 text-sm leading-relaxed">{point}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+
+                      <section>
+                        <h3 className="text-lg font-bold text-emerald-400 flex items-center gap-2 mb-3"><CheckCircle2 size={20}/> Strategic Recommendations</h3>
+                        <div className="space-y-3">
+                          {item.aiData.recommendations?.map((point: string, rIdx: number) => (
+                            <div key={rIdx} className="flex items-start gap-3 bg-emerald-950/40 p-4 rounded-xl border-l-4 border-l-emerald-500 border-y border-r border-emerald-900/50 shadow-md">
+                              <CheckCircle2 className="text-emerald-400 shrink-0 mt-0.5" size={18}/>
+                              <p className="text-slate-200 text-sm leading-relaxed">{point}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    </div>
+
+                    <div className="lg:col-span-5 space-y-6">
+                      <div className="bg-slate-950/80 backdrop-blur-md p-5 rounded-2xl border border-slate-700/50 shadow-inner">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 text-center">Predictive Trajectory Simulation</h3>
+                        <div className="h-48">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={predictive_chart}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false}/>
+                              <XAxis dataKey="month" stroke="#94A3B8" tick={{fontSize: 11}}/>
+                              <YAxis stroke="#94A3B8" tick={{fontSize: 11}} domain={['auto', 'auto']}/>
+                              <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '8px' }}/>
+                              <Line type="monotone" dataKey="baseline" stroke="#F59E0B" strokeWidth={3} dot={false} name="Baseline" />
+                              <Line type="monotone" dataKey="optimistic" stroke="#10B981" strokeWidth={2} strokeDasharray="4 4" dot={false} name="Optimistic" />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <div className="bg-blue-500/10 p-3 rounded-full border border-blue-500/20 mb-4">
+                      <Sparkles size={28} className="text-blue-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">Standard AI Insight</h3>
+                    <p className="text-base text-slate-300 leading-relaxed max-w-2xl">{item.aiData?.insight}</p>
+                  </div>
+                )}
               </div>
-              <h3 className="text-2xl font-bold text-white mb-4">Standard AI Insight</h3>
-              <p className="text-xl text-slate-300 leading-relaxed max-w-3xl">{aiData.insight}</p>
+
+            </div>
+          ))}
+
+          {loading && (
+            <div className="flex items-center gap-3 p-4 bg-slate-900/60 rounded-2xl border border-slate-700/40 w-fit backdrop-blur-md animate-pulse">
+              <Sparkles size={18} className="text-teal-400 animate-spin" />
+              <span className="text-sm text-slate-300 font-medium">Gemini is synthesizing quantitative intelligence...</span>
             </div>
           )}
+
+          <div ref={chatEndRef} />
         </div>
+
+        {/* Floating Interactive Input Bar (Chatbot Style) */}
+        <div className="fixed bottom-4 left-0 right-0 max-w-4xl mx-auto px-4 z-30">
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (userQuery.trim() && !loading) {
+                fetchInsights(false, undefined, userQuery);
+              }
+            }}
+            className="bg-slate-900/90 backdrop-blur-xl p-2 md:p-3 rounded-2xl border border-slate-700/80 shadow-2xl flex items-center gap-2 ring-1 ring-white/10"
+          >
+            <input 
+              type="text" 
+              placeholder="Ask a follow-up (e.g. 'what are my risks?', 'how to optimize sector weights?')..."
+              className="flex-1 bg-transparent px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none"
+              value={userQuery}
+              onChange={(e) => setUserQuery(e.target.value)}
+              disabled={loading}
+            />
+            <button 
+              type="submit" 
+              disabled={loading || !userQuery.trim()} 
+              className="bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-500 hover:to-teal-400 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-2 disabled:opacity-40 shadow-lg"
+            >
+              {loading ? <Sparkles size={16} className="animate-spin" /> : <><Send size={15}/> <span>Send</span></>}
+            </button>
+          </form>
+        </div>
+
       </div>
     );
   }
@@ -424,8 +512,19 @@ export default function Dashboard() {
 
       {/* Query Bar */}
       <div className="bg-slate-900/60 backdrop-blur-xl p-4 rounded-2xl border border-slate-700/50 shadow-lg flex gap-3">
-        <input type="text" placeholder="Enter prompt for risk breakdown, projections, or anomalies..." className="flex-1 bg-slate-950/80 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 backdrop-blur-sm" value={userQuery} onChange={(e) => setUserQuery(e.target.value)} />
-        <button onClick={() => fetchInsights(false)} disabled={loading} className="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-xl text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap border border-blue-500 shadow-lg">
+        <input 
+          type="text" 
+          placeholder="Enter prompt for risk breakdown, projections, or anomalies..." 
+          className="flex-1 bg-slate-950/80 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 backdrop-blur-sm" 
+          value={userQuery} 
+          onChange={(e) => setUserQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && userQuery.trim() && !loading) {
+              fetchInsights(false, undefined, userQuery);
+            }
+          }}
+        />
+        <button onClick={() => fetchInsights(false, undefined, userQuery)} disabled={loading || !userQuery.trim()} className="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-xl text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap border border-blue-500 shadow-lg disabled:opacity-50">
           {loading ? "Processing..." : <><Sparkles size={16}/> Execute Deep Analysis</>}
         </button>
       </div>
