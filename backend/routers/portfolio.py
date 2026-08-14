@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import json
 import yfinance as yf
-import google.generativeai as genai 
+from google import genai
 from database import get_db
 import schemas
 import models
@@ -14,11 +14,9 @@ from auth import verify_firebase_token
 # Load environment variables
 load_dotenv()
 
-# Extract API Key & Configure Gemini
+# Extract API Key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-else:
+if not GEMINI_API_KEY:
     print("WARNING: GEMINI_API_KEY not found in environment variables")
 
 router = APIRouter(
@@ -27,8 +25,8 @@ router = APIRouter(
 
 def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
     """
-    Passes the portfolio context to Gemini using the google-generativeai SDK.
-    Strictly forces the LLM to return structured JSON.
+    Passes portfolio context to Gemini using the official google-genai SDK.
+    Forces the LLM to return structured JSON.
     """
     if not GEMINI_API_KEY:
         return {
@@ -36,10 +34,8 @@ def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
             "insight": "AI API Key missing. Returning fallback analysis: Your portfolio is heavily concentrated in top assets. Diversification is recommended."
         }
 
-    # Convert the pandas dataframe to a string representation for the LLM context
     portfolio_summary = portfolio_df.to_json(orient="records")
     
-    # Enterprise-grade System Prompt
     prompt = f"""
     You are an elite quantitative financial analyst at a top-tier MNC.
     You have been provided with the following user portfolio data:
@@ -64,13 +60,16 @@ def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
     """
 
     try:
-        # Initialize the stable model
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(prompt)
+        # Initialize the modern Google GenAI Client
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
         
         raw_text = response.text.strip()
         
-        # Clean up the response in case the LLM includes markdown code blocks
         if raw_text.startswith("```json"):
             raw_text = raw_text[7:-3]
         elif raw_text.startswith("```"):
@@ -94,7 +93,6 @@ async def analyze_portfolio(
     verified_user_id = user_data.get("uid")
     print(f"\n--- NEW ANALYSIS REQUEST STARTED FOR USER: {verified_user_id} ---")
     
-    # 1. Fetch or Set Holdings Data
     print("1. Fetching portfolio data from database...")
     if request.custom_holdings:
         holdings_data = [
@@ -137,7 +135,6 @@ async def analyze_portfolio(
 
     df = pd.DataFrame(holdings_data)
     
-    # 2. Market Data Processing (Live yfinance integration)
     print(f"2. Fetching live Yahoo Finance data for {len(df)} stocks...")
     total_invested = 0.0
     total_current = 0.0
@@ -203,7 +200,6 @@ async def analyze_portfolio(
         "predictive_chart": predictive_chart
     }
 
-    # 3. Call the True AI Integration
     print("3. Live data calculated. Calling Google Gemini API...")
     df['live_market_price'] = [sc['current'] / float(qty) for sc, qty in zip(stock_comparison, df['quantity'])]
     
