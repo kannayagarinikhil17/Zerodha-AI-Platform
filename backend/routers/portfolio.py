@@ -32,14 +32,14 @@ def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
         return {
             "type": "detailed",
             "query": user_query if user_query else "Portfolio Analysis",
-            "executive_summary": "AI API Key missing. Returning fallback quantitative review: Portfolio demonstrates baseline allocation across tracked assets.",
+            "executive_summary": "To maximize profit, you must cut underperforming assets and reallocate to your strongest sectors. (Note: Live AI generation is currently offline due to API limits; displaying baseline heuristic analysis).",
             "key_findings": [
-                "Concentration risk identified in primary asset classes.",
-                "Unrealized P&L reflects current market movement."
+                "Your portfolio shows high concentration in a single sector, increasing vulnerability.",
+                "Certain individual holdings are dragging down the overall Unrealized P&L."
             ],
             "recommendations": [
-                "Diversify sector exposure to mitigate volatility.",
-                "Review asset holding periods against risk tolerance."
+                "Review the 'Holdings Impact' chart to identify which specific stocks are trading below average buy price.",
+                "Consider rebalancing capital from the lowest-performing asset into your top performer."
             ]
         }
 
@@ -54,21 +54,18 @@ def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
 
     INSTRUCTIONS:
     1. You MUST set "type": "detailed" because the user asked a specific question.
-    2. Provide a rigorous, deep quantitative financial breakdown addressing the user's query directly (e.g., if asking for pros and cons, explicitly detail the portfolio's strengths as pros and weaknesses/vulnerabilities as cons).
-    3. Generate a robust executive summary (3-4 sentences).
-    4. Provide 3-4 granular key findings.
-    5. Provide 3-4 actionable strategic recommendations.
+    2. EXECUTIVE SUMMARY: The VERY FIRST sentence must be a direct, blunt, point-to-point answer to the user's query. Follow it immediately with a 2-3 sentence description explaining the 'why' based strictly on their portfolio data.
+    3. KEY FINDINGS: Provide 3-4 granular points focusing on specific stock tickers and their impact.
+    4. RECOMMENDATIONS: Provide 3-4 actionable strategic steps to achieve the user's goal.
 
     CRITICAL: Respond ONLY with a raw JSON object. Do not include markdown formatting, backticks, or introductory text. Match this exact schema:
     {{
         "type": "detailed",
         "query": "{user_query if user_query else 'General Portfolio Health Assessment'}",
-        "executive_summary": "Detailed 3-4 sentence quantitative summary addressing the pros, cons, and portfolio performance.",
+        "executive_summary": "[Direct Answer]. [Brief explanation of portfolio impact].",
         "key_findings": [
             "Pro/Strength 1: ...",
-            "Pro/Strength 2: ...",
-            "Con/Vulnerability 1: ...",
-            "Con/Vulnerability 2: ..."
+            "Con/Vulnerability 1: ..."
         ],
         "recommendations": [
             "Actionable recommendation 1...",
@@ -107,14 +104,14 @@ def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
     return {
         "type": "detailed",
         "query": user_query if user_query else "Portfolio Analysis",
-        "executive_summary": "Comprehensive quantitative review completed via live market data. High demand on neural nodes triggered heuristic fallback reporting.",
+        "executive_summary": "To maximize profit, you must cut underperforming assets and reallocate to your strongest sectors. (Note: Live AI generation is currently offline due to API limits; displaying baseline heuristic analysis).",
         "key_findings": [
-            "Strengths: Core asset holdings provide stable sectoral tracking.",
-            "Vulnerabilities: Limited hedging exposes portfolio to short-term market drawdowns."
+            "Your portfolio shows high concentration in a single sector, increasing vulnerability.",
+            "Certain individual holdings are dragging down the overall Unrealized P&L."
         ],
         "recommendations": [
-            "Rebalance allocations to buffer against sector-specific downturns.",
-            "Implement trailing stop-loss thresholds on underperforming positions."
+            "Review the 'Holdings Impact' chart to identify which specific stocks are trading below average buy price.",
+            "Consider rebalancing capital from the lowest-performing asset into your top performer."
         ]
     }
 

@@ -396,19 +396,28 @@ export default function Dashboard() {
 
                     <div className="lg:col-span-5 space-y-6">
                       <div className="bg-slate-950/80 backdrop-blur-md p-5 rounded-2xl border border-slate-700/50 shadow-inner">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 text-center">Predictive Trajectory Simulation</h3>
-                        <div className="h-48">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 text-center">
+                          Holdings Impact Analysis
+                        </h3>
+                        <div className="h-64">
                           <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={predictive_chart}>
+                            <BarChart data={analyticsData?.stock_comparison || []}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false}/>
-                              <XAxis dataKey="month" stroke="#94A3B8" tick={{fontSize: 11}}/>
-                              <YAxis stroke="#94A3B8" tick={{fontSize: 11}} domain={['auto', 'auto']}/>
-                              <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '8px' }}/>
-                              <Line type="monotone" dataKey="baseline" stroke="#F59E0B" strokeWidth={3} dot={false} name="Baseline" />
-                              <Line type="monotone" dataKey="optimistic" stroke="#10B981" strokeWidth={2} strokeDasharray="4 4" dot={false} name="Optimistic" />
-                            </LineChart>
+                              <XAxis dataKey="symbol" stroke="#94A3B8" tick={{fontSize: 11}}/>
+                              <YAxis stroke="#94A3B8" tick={{fontSize: 11}} tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`}/>
+                              <Tooltip 
+                                contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '8px' }}
+                                formatter={(value: any) => ["₹" + (value || 0).toLocaleString(), ""]}
+                              />
+                              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                              <Bar dataKey="invested" fill="#3B82F6" name="Invested Capital" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="current" fill="#10B981" name="Current Value" radius={[4, 4, 0, 0]} />
+                            </BarChart>
                           </ResponsiveContainer>
                         </div>
+                        <p className="text-[10px] text-slate-500 text-center mt-4">
+                          *Compare invested vs. current value to identify profit drivers and margin drags.
+                        </p>
                       </div>
                     </div>
                   </div>
