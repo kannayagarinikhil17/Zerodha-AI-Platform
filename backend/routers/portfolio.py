@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import json
 import yfinance as yf
-from google import genai 
+import google.generativeai as genai 
 from database import get_db
 import schemas
 import models
