@@ -14,10 +14,12 @@ from auth import verify_firebase_token
 # Load environment variables
 load_dotenv()
 
-# Extract API Key
+# Extract API Key & Configure Gemini
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    print("WARNING: GEMINI_API_KEY not found in .env file")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+else:
+    print("WARNING: GEMINI_API_KEY not found in environment variables")
 
 router = APIRouter(
     tags=["Portfolio Analytics"]
@@ -25,7 +27,7 @@ router = APIRouter(
 
 def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
     """
-    Passes the portfolio context to Gemini using the new google-genai SDK.
+    Passes the portfolio context to Gemini using the google-generativeai SDK.
     Strictly forces the LLM to return structured JSON.
     """
     if not GEMINI_API_KEY:
@@ -56,23 +58,17 @@ def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
         "insight": "A single sentence insight (only if type is standard)",
         "query": "The user's original query (only if type is detailed)",
         "executive_summary": "2-3 sentences summarizing the quantitative analysis (only if type is detailed)",
-        "key_findings": ["Finding 1", "Finding 2"] (only if type is detailed),
-        "recommendations": ["Recommendation 1", "Recommendation 2"] (only if type is detailed)
+        "key_findings": ["Finding 1", "Finding 2"],
+        "recommendations": ["Recommendation 1", "Recommendation 2"]
     }}
     """
 
     try:
-        # Initialize the new SDK Client
-        client = genai.Client(api_key=GEMINI_API_KEY)
+        # Initialize the stable model
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(prompt)
         
-        # Use the newly required Interactions API with the 3.6-flash model
-        interaction = client.interactions.create(
-            model='gemini-3.6-flash',
-            input=prompt
-        )
-        
-        # Extract text from the new Interactions object
-        raw_text = interaction.output_text.strip()
+        raw_text = response.text.strip()
         
         # Clean up the response in case the LLM includes markdown code blocks
         if raw_text.startswith("```json"):
