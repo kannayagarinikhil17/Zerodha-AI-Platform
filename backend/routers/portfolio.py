@@ -45,10 +45,6 @@ def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
 
     portfolio_summary = portfolio_df.to_json(orient="records")
     
-    # If the query is empty, default to a standard review, otherwise force a deep detailed report
-    is_detailed = bool(user_query and len(user_query.strip()) > 0)
-    report_type = "detailed" if is_detailed else "standard"
-    
     prompt = f"""
     You are an elite quantitative financial analyst at a top-tier MNC (like Goldman Sachs or Morgan Stanley).
     You have been provided with the following live user portfolio data:
@@ -100,7 +96,7 @@ def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
                 raw_text = raw_text[3:-3]
                 
             parsed_json = json.loads(raw_text.strip())
-            parsed_json["type"] = "detailed"  # Force frontend to render the deep report card view
+            parsed_json["type"] = "detailed"
             return parsed_json
             
         except Exception as e:
@@ -131,6 +127,7 @@ async def analyze_portfolio(
     verified_user_id = user_data.get("uid")
     print(f"\n--- NEW ANALYSIS REQUEST STARTED FOR USER: {verified_user_id} ---")
     
+    # 1. Fetch or Set Holdings Data
     print("1. Fetching portfolio data from database...")
     if request.custom_holdings:
         holdings_data = [
@@ -173,26 +170,72 @@ async def analyze_portfolio(
 
     df = pd.DataFrame(holdings_data)
     
-    print(f"2. Fetching live Yahoo Finance data for {len(df)} stocks...")
+    # 2. Market Data Processing (Live yfinance + 30-Day History + News + Volatility Alerts)
+    print(f"2. Fetching live Yahoo Finance 30-day history, news, and alerts for {len(df)} stocks...")
     total_invested = 0.0
     total_current = 0.0
     stock_comparison = []
     sector_exposure = {}
+    
+    live_news = []
+    automated_alerts = []
+    historical_chart_data = {}
 
     for index, row in df.iterrows():
         symbol = row['symbol']
         ticker_symbol = f"{symbol}.NS" if not symbol.endswith(('.NS', '.BO', '.O')) else symbol
+        quantity = float(row['quantity'])
+        avg_price = float(row['average_price'])
         
         try:
             stock = yf.Ticker(ticker_symbol)
-            hist = stock.history(period="1d")
-            current_price = hist['Close'].iloc[-1] if not hist.empty else float(row['average_price'])
-        except Exception as e:
-            print(f"   -> Failed to fetch data for {symbol}: {e}")
-            current_price = float(row['average_price'])
+            hist = stock.history(period="1mo")
+            current_price = float(hist['Close'].iloc[-1]) if not hist.empty else avg_price
+            
+            # Automated Movement Alerts
+            if not hist.empty and len(hist) > 1:
+                prev_close = float(hist['Close'].iloc[-2])
+                daily_change = ((current_price - prev_close) / prev_close) * 100
+                if daily_change <= -3.0:
+                    automated_alerts.append({
+                        "type": "danger",
+                        "symbol": symbol,
+                        "message": f"🚨 {symbol} decreased by {abs(daily_change):.2f}% during the last session."
+                    })
+                elif daily_change >= 3.0:
+                    automated_alerts.append({
+                        "type": "success",
+                        "symbol": symbol,
+                        "message": f"🚀 {symbol} gained {daily_change:.2f}% during the last session."
+                    })
 
-        invested = float(row['quantity']) * float(row['average_price'])
-        current = float(row['quantity']) * current_price
+            # Stock News Retrieval
+            stock_news = getattr(stock, 'news', []) or []
+            for article in stock_news[:2]:
+                title = article.get('title')
+                link = article.get('link')
+                publisher = article.get('publisher', 'Market News')
+                if title and link:
+                    live_news.append({
+                        "symbol": symbol,
+                        "title": title,
+                        "link": link,
+                        "publisher": publisher
+                    })
+
+            # 30-Day Aggregated Portfolio Performance History
+            if not hist.empty:
+                for date_idx, hist_row in hist.iterrows():
+                    date_str = date_idx.strftime('%Y-%m-%d')
+                    daily_value = float(hist_row['Close']) * quantity
+                    historical_chart_data[date_str] = historical_chart_data.get(date_str, 0.0) + daily_value
+
+        except Exception as e:
+            print(f"   -> Failed to fetch live data for {symbol}: {e}")
+            current_price = avg_price
+
+        invested = quantity * avg_price
+        current = quantity * current_price
         
         total_invested += invested
         total_current += current
@@ -204,15 +247,20 @@ async def analyze_portfolio(
         })
         
         sector = row['sector']
-        sector_exposure[sector] = sector_exposure.get(sector, 0) + current
+        sector_exposure[sector] = sector_exposure.get(sector, 0.0) + current
 
     unrealized_pnl = total_current - total_invested
-    return_percentage = (unrealized_pnl / total_invested * 100) if total_invested > 0 else 0
+    return_percentage = (unrealized_pnl / total_invested * 100) if total_invested > 0 else 0.0
 
     theme_colors = ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B", "#EF4444", "#14B8A6"]
     sector_data = [
         {"name": k, "value": round(v, 2), "color": theme_colors[i % len(theme_colors)]} 
         for i, (k, v) in enumerate(sector_exposure.items())
+    ]
+
+    formatted_historical_chart = [
+        {"date": date_key, "portfolio_value": round(val, 2)} 
+        for date_key, val in sorted(historical_chart_data.items())
     ]
 
     predictive_chart = []
@@ -234,17 +282,23 @@ async def analyze_portfolio(
         },
         "sector_data": sector_data,
         "stock_comparison": stock_comparison,
-        "historical_chart": [], 
-        "predictive_chart": predictive_chart
+        "historical_chart": formatted_historical_chart,
+        "predictive_chart": predictive_chart,
+        "live_news": live_news,
+        "automated_alerts": automated_alerts
     }
 
-    print("3. Live data calculated. Calling Google Gemini API...")
-    df['live_market_price'] = [sc['current'] / float(qty) for sc, qty in zip(stock_comparison, df['quantity'])]
+    # 3. AI Insights Generation
+    print("3. Live metrics computed. Generating deep Gemini AI intelligence report...")
+    df['live_market_price'] = [
+        sc['current'] / float(qty) if float(qty) > 0 else 0 
+        for sc, qty in zip(stock_comparison, df['quantity'])
+    ]
     
     user_query = request.query if request.query else ""
     ai_intelligence_card = generate_ai_insights(df, user_query)
 
-    print("4. Gemini API processing complete! Sending payload to Next.js.")
+    print("4. Processing complete. Sending comprehensive payload to frontend.")
     return {
         "analytics_metrics": analytics_metrics,
         "ai_intelligence_card": ai_intelligence_card

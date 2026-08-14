@@ -6,7 +6,7 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
-import { ShieldCheck, Sparkles, Plus, Trash2, ArrowLeft, TrendingUp, PieChart as PieIcon, BarChart3, LineChart as LineIcon, CheckCircle2, AlertTriangle, FileText, Upload, FileSpreadsheet } from 'lucide-react';
+import { ShieldCheck, Sparkles, Plus, Trash2, ArrowLeft, TrendingUp, PieChart as PieIcon, BarChart3, LineChart as LineIcon, CheckCircle2, AlertTriangle, FileText, Upload, FileSpreadsheet, Newspaper } from 'lucide-react';
 
 export default function Dashboard() {
   const [currentView, setCurrentView] = useState<"welcome" | "input" | "analytics" | "query_response">("welcome");
@@ -97,7 +97,6 @@ export default function Dashboard() {
     try {
       const idToken = await currentUser.getIdToken(true);
       
-      // Dynamically get the backend URL (defaults to localhost if the env variable is missing)
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
       const response = await fetch(`${backendUrl}/api/portfolio-analysis`, {
@@ -133,7 +132,6 @@ export default function Dashboard() {
         return;
       }
 
-      // Explicitly bind the incoming backend data to the React state
       setAnalyticsData(data.analytics_metrics);
       setAiData(data.ai_intelligence_card);
       
@@ -294,9 +292,10 @@ export default function Dashboard() {
     );
   }
 
-  const { summary, sector_data, stock_comparison, historical_chart, predictive_chart } = analyticsData || {};
+  // Extract variables with fallbacks
+  const { summary, sector_data, historical_chart = [], predictive_chart, live_news = [], automated_alerts = [] } = analyticsData || {};
 
-  // --- SCREEN 3: QUERY RESPONSE VIEW (Updated to handle standard and detailed) ---
+  // --- SCREEN 3: QUERY RESPONSE VIEW ---
   if (currentView === "query_response" && aiData) {
     return (
       <div className="min-h-screen text-slate-100 p-6 md:p-10 space-y-6 font-sans bg-cover bg-center bg-fixed" style={{ backgroundImage: `linear-gradient(to bottom, rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.95)), url('https://i.pinimg.com/736x/79/68/74/7968740973b0b6dd1b4668fdae827ad7.jpg')` }}>
@@ -384,7 +383,9 @@ export default function Dashboard() {
 
   // --- SCREEN 4: STANDARD DASHBOARD ---
   return (
-    <div className="min-h-screen text-slate-100 p-6 md:p-10 space-y-8 bg-cover bg-center bg-fixed" style={{ backgroundImage: `linear-gradient(to bottom, rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.95)), url('https://i.pinimg.com/736x/79/68/74/7968740973b0b6dd1b4668fdae827ad7.jpg')` }}>
+    <div className="min-h-screen text-slate-100 p-6 md:p-10 space-y-6 bg-cover bg-center bg-fixed" style={{ backgroundImage: `linear-gradient(to bottom, rgba(2, 6, 23, 0.85), rgba(2, 6, 23, 0.95)), url('https://i.pinimg.com/736x/79/68/74/7968740973b0b6dd1b4668fdae827ad7.jpg')` }}>
+      
+      {/* Top Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-700/50 shadow-xl gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -398,13 +399,38 @@ export default function Dashboard() {
         </button>
       </div>
 
+      {/* Automated Alert Banner */}
+      {automated_alerts.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {automated_alerts.map((alert: any, index: number) => (
+            <div 
+              key={index} 
+              className={`flex items-center p-4 rounded-xl border shadow-md backdrop-blur-md ${
+                alert.type === 'danger' 
+                  ? 'bg-red-950/40 border-red-500/50 text-red-200' 
+                  : 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200'
+              }`}
+            >
+              {alert.type === 'danger' ? (
+                <AlertTriangle className="w-5 h-5 mr-3 text-red-400 shrink-0" />
+              ) : (
+                <TrendingUp className="w-5 h-5 mr-3 text-emerald-400 shrink-0" />
+              )}
+              <span className="font-medium tracking-wide text-sm">{alert.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Query Bar */}
       <div className="bg-slate-900/60 backdrop-blur-xl p-4 rounded-2xl border border-slate-700/50 shadow-lg flex gap-3">
         <input type="text" placeholder="Enter prompt for risk breakdown, projections, or anomalies..." className="flex-1 bg-slate-950/80 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 backdrop-blur-sm" value={userQuery} onChange={(e) => setUserQuery(e.target.value)} />
-        <button onClick={() => fetchInsights(false)} disabled={loading} className="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-xl text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap border border-blue-500">
+        <button onClick={() => fetchInsights(false)} disabled={loading} className="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-xl text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap border border-blue-500 shadow-lg">
           {loading ? "Processing..." : <><Sparkles size={16}/> Execute Deep Analysis</>}
         </button>
       </div>
 
+      {/* Primary Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl border border-slate-700/50 shadow-lg">
           <p className="text-slate-300 text-xs font-medium">Current Market Value</p>
@@ -424,6 +450,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Main Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-700/50 shadow-lg space-y-4">
           <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2"><TrendingUp size={18} className="text-blue-400"/> Chart 1: 30-Day Portfolio Performance</h3>
@@ -437,10 +464,19 @@ export default function Dashboard() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false}/>
-                <XAxis dataKey="date" stroke="#94A3B8" tick={{fontSize: 11}}/>
-                <YAxis stroke="#94A3B8" tick={{fontSize: 11}} domain={['auto', 'auto']}/>
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#94A3B8" 
+                  tick={{fontSize: 11}}
+                  tickFormatter={(str) => {
+                    if (!str) return '';
+                    const date = new Date(str);
+                    return `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })}`;
+                  }}
+                />
+                <YAxis stroke="#94A3B8" tick={{fontSize: 11}} tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`} domain={['auto', 'auto']}/>
                 <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '8px' }}/>
-                <Area type="monotone" dataKey="portfolioValue" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" name="Market Value (₹)" />
+                <Area type="monotone" dataKey="portfolio_value" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" name="Market Value" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -463,6 +499,37 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Live News Feed Section */}
+      <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-700/50 shadow-lg">
+        <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2 mb-6"><Newspaper size={18} className="text-purple-400"/> Live Market Intelligence</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {live_news.length > 0 ? (
+            live_news.map((news: any, index: number) => (
+              <a 
+                key={index} 
+                href={news.link} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block p-4 bg-slate-950/50 hover:bg-slate-800/80 transition-colors rounded-xl border border-slate-700/50 group h-full shadow-inner"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <span className="text-[10px] font-bold px-2 py-1 bg-blue-900/40 text-blue-300 rounded border border-blue-700/30 uppercase tracking-wider">
+                    {news.symbol}
+                  </span>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wide truncate max-w-[50%] text-right">{news.publisher}</span>
+                </div>
+                <p className="text-sm font-medium text-slate-200 group-hover:text-blue-400 transition-colors line-clamp-3 leading-snug">
+                  {news.title}
+                </p>
+              </a>
+            ))
+          ) : (
+            <p className="text-sm text-slate-500 col-span-full">No recent market news available for your currently tracked holdings.</p>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }
