@@ -28,37 +28,41 @@ def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
     Passes portfolio context to Gemini and forces a 'detailed' deep analysis 
     report card whenever a query is provided by the user.
     """
+    # ONE dynamic fallback used for ANY failure (missing key or API crash)
+    fallback_response = {
+        "type": "detailed",
+        "query": user_query if user_query else "Portfolio Analysis",
+        "executive_summary": f"Regarding '{user_query}': Based on your current stock distribution, your holdings show balanced sector correlation with moderate volatility exposure. (Note: Live AI connection failed).",
+        "key_findings": [
+            "Asset weightings are tightly bound to your primary market tickers.",
+            "Unrealized P&L variations align with recent exchange fluctuations."
+        ],
+        "recommendations": [
+            "Monitor sector concentration levels to maintain risk balance.",
+            "Inspect the holdings impact chart to track individual asset performance."
+        ]
+    }
+
     if not GEMINI_API_KEY:
-        return {
-            "type": "detailed",
-            "query": user_query if user_query else "Portfolio Analysis",
-            "executive_summary": "To maximize profit, you must cut underperforming assets and reallocate to your strongest sectors. (Note: Live AI generation is currently offline due to API limits; displaying baseline heuristic analysis).",
-            "key_findings": [
-                "Your portfolio shows high concentration in a single sector, increasing vulnerability.",
-                "Certain individual holdings are dragging down the overall Unrealized P&L."
-            ],
-            "recommendations": [
-                "Review the 'Holdings Impact' chart to identify which specific stocks are trading below average buy price.",
-                "Consider rebalancing capital from the lowest-performing asset into your top performer."
-            ]
-        }
+        print("DEBUG: API Key is missing! Hitting Top Fallback.")
+        return fallback_response
 
     portfolio_summary = portfolio_df.to_json(orient="records")
     
     prompt = f"""
-    You are an elite quantitative financial analyst at a top-tier MNC (like Goldman Sachs or Morgan Stanley).
+    You are an elite quantitative financial analyst at a top-tier MNC.
     You have been provided with the following live user portfolio data:
     {portfolio_summary}
 
     The user has submitted this specific analytical query: "{user_query if user_query else 'General Portfolio Health Assessment'}"
 
     INSTRUCTIONS:
-    1. You MUST set "type": "detailed" because the user asked a specific question.
+    1. You MUST set "type": "detailed".
     2. EXECUTIVE SUMMARY: The VERY FIRST sentence must be a direct, blunt, point-to-point answer to the user's query. Follow it immediately with a 2-3 sentence description explaining the 'why' based strictly on their portfolio data.
     3. KEY FINDINGS: Provide 3-4 granular points focusing on specific stock tickers and their impact.
     4. RECOMMENDATIONS: Provide 3-4 actionable strategic steps to achieve the user's goal.
 
-    CRITICAL: Respond ONLY with a raw JSON object. Do not include markdown formatting, backticks, or introductory text. Match this exact schema:
+    CRITICAL: Respond ONLY with a raw JSON object matching this exact schema:
     {{
         "type": "detailed",
         "query": "{user_query if user_query else 'General Portfolio Health Assessment'}",
@@ -100,20 +104,8 @@ def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
             print(f"Model {model_name} failed: {e}. Trying next fallback...")
             continue
 
-    # Fallback if models experience high demand
-    return {
-        "type": "detailed",
-        "query": user_query if user_query else "Portfolio Analysis",
-        "executive_summary": "To maximize profit, you must cut underperforming assets and reallocate to your strongest sectors. (Note: Live AI generation is currently offline due to API limits; displaying baseline heuristic analysis).",
-        "key_findings": [
-            "Your portfolio shows high concentration in a single sector, increasing vulnerability.",
-            "Certain individual holdings are dragging down the overall Unrealized P&L."
-        ],
-        "recommendations": [
-            "Review the 'Holdings Impact' chart to identify which specific stocks are trading below average buy price.",
-            "Consider rebalancing capital from the lowest-performing asset into your top performer."
-        ]
-    }
+    print("DEBUG: All models failed! Hitting Bottom Fallback.")
+    return fallback_response
 
 @router.post("/api/portfolio-analysis")
 async def analyze_portfolio(
@@ -124,7 +116,6 @@ async def analyze_portfolio(
     verified_user_id = user_data.get("uid")
     print(f"\n--- NEW ANALYSIS REQUEST STARTED FOR USER: {verified_user_id} ---")
     
-    # 1. Fetch or Set Holdings Data
     print("1. Fetching portfolio data from database...")
     if request.custom_holdings:
         holdings_data = [
@@ -167,7 +158,6 @@ async def analyze_portfolio(
 
     df = pd.DataFrame(holdings_data)
     
-    # 2. Market Data Processing (Live yfinance + 30-Day History + News + Volatility Alerts)
     print(f"2. Fetching live Yahoo Finance 30-day history, news, and alerts for {len(df)} stocks...")
     total_invested = 0.0
     total_current = 0.0
@@ -189,7 +179,6 @@ async def analyze_portfolio(
             hist = stock.history(period="1mo")
             current_price = float(hist['Close'].iloc[-1]) if not hist.empty else avg_price
             
-            # Automated Movement Alerts
             if not hist.empty and len(hist) > 1:
                 prev_close = float(hist['Close'].iloc[-2])
                 daily_change = ((current_price - prev_close) / prev_close) * 100
@@ -206,7 +195,6 @@ async def analyze_portfolio(
                         "message": f"🚀 {symbol} gained {daily_change:.2f}% during the last session."
                     })
 
-            # Stock News Retrieval
             stock_news = getattr(stock, 'news', []) or []
             for article in stock_news[:2]:
                 title = article.get('title')
@@ -220,7 +208,6 @@ async def analyze_portfolio(
                         "publisher": publisher
                     })
 
-            # 30-Day Aggregated Portfolio Performance History
             if not hist.empty:
                 for date_idx, hist_row in hist.iterrows():
                     date_str = date_idx.strftime('%Y-%m-%d')
@@ -285,7 +272,6 @@ async def analyze_portfolio(
         "automated_alerts": automated_alerts
     }
 
-    # 3. AI Insights Generation
     print("3. Live metrics computed. Generating deep Gemini AI intelligence report...")
     df['live_market_price'] = [
         sc['current'] / float(qty) if float(qty) > 0 else 0 
