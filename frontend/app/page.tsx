@@ -173,7 +173,7 @@ export default function Dashboard() {
       }
       
     } catch (error) {
-      setErrorMsg("Unable to connect to backend server.");
+      setErrorMsg("Unable to connect to backend server. Please verify NEXT_PUBLIC_BACKEND_URL is set in Vercel.");
     }
     setLoading(false);
   };
@@ -326,7 +326,7 @@ export default function Dashboard() {
   // Extract variables with fallbacks
   const { summary, sector_data, historical_chart = [], predictive_chart, live_news = [], automated_alerts = [] } = analyticsData || {};
 
-  // --- SCREEN 3: CONTINUOUS GEMINI AI CHAT & REPORT VIEW ---
+  // --- SCREEN 3: CONTINUOUS AI CHAT & REPORT VIEW ---
   if (currentView === "query_response") {
     return (
       <div className="min-h-screen text-slate-100 p-4 md:p-8 space-y-6 font-sans bg-cover bg-center bg-fixed flex flex-col justify-between" style={{ backgroundImage: `linear-gradient(to bottom, rgba(2, 6, 23, 0.88), rgba(2, 6, 23, 0.96)), url('https://i.pinimg.com/736x/79/68/74/7968740973b0b6dd1b4668fdae827ad7.jpg')` }}>
@@ -338,13 +338,21 @@ export default function Dashboard() {
           </button>
           <div className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-widest hidden sm:inline">Zerodha Gemini Assistant</span>
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-widest hidden sm:inline">Zerodha AI Assistant</span>
             <span className="font-mono text-xs text-slate-400 bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800">{auth.currentUser?.email}</span>
           </div>
         </div>
 
         {/* Conversation Stream */}
         <div className="space-y-8 flex-1 max-w-6xl w-full mx-auto pb-24">
+          
+          {errorMsg && (
+            <div className="bg-red-950/50 border border-red-500/50 text-red-200 p-4 rounded-xl flex items-center gap-3 backdrop-blur-md">
+              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+              <span className="text-sm font-medium">{errorMsg}</span>
+            </div>
+          )}
+
           {chatHistory.map((item, idx) => (
             <div key={item.id || idx} className="space-y-6 animate-fadeIn">
               
@@ -438,7 +446,7 @@ export default function Dashboard() {
           {loading && (
             <div className="flex items-center gap-3 p-4 bg-slate-900/60 rounded-2xl border border-slate-700/40 w-fit backdrop-blur-md animate-pulse">
               <Sparkles size={18} className="text-teal-400 animate-spin" />
-              <span className="text-sm text-slate-300 font-medium">Gemini is synthesizing quantitative intelligence...</span>
+              <span className="text-sm text-slate-300 font-medium">AI is synthesizing quantitative intelligence...</span>
             </div>
           )}
 
@@ -520,22 +528,33 @@ export default function Dashboard() {
       )}
 
       {/* Query Bar */}
-      <div className="bg-slate-900/60 backdrop-blur-xl p-4 rounded-2xl border border-slate-700/50 shadow-lg flex gap-3">
-        <input 
-          type="text" 
-          placeholder="Enter prompt for risk breakdown, projections, or anomalies..." 
-          className="flex-1 bg-slate-950/80 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 backdrop-blur-sm" 
-          value={userQuery} 
-          onChange={(e) => setUserQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && userQuery.trim() && !loading) {
-              fetchInsights(false, undefined, userQuery);
-            }
-          }}
-        />
-        <button onClick={() => fetchInsights(false, undefined, userQuery)} disabled={loading || !userQuery.trim()} className="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-xl text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap border border-blue-500 shadow-lg disabled:opacity-50">
-          {loading ? "Processing..." : <><Sparkles size={16}/> Execute Deep Analysis</>}
-        </button>
+      <div className="space-y-4">
+        
+        {/* Missing Error Display added here! */}
+        {errorMsg && (
+          <div className="bg-red-950/50 border border-red-500/50 text-red-200 p-4 rounded-xl flex items-center gap-3 backdrop-blur-md">
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+            <span className="text-sm font-medium">{errorMsg}</span>
+          </div>
+        )}
+
+        <div className="bg-slate-900/60 backdrop-blur-xl p-4 rounded-2xl border border-slate-700/50 shadow-lg flex gap-3">
+          <input 
+            type="text" 
+            placeholder="Enter prompt for risk breakdown, projections, or anomalies..." 
+            className="flex-1 bg-slate-950/80 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 backdrop-blur-sm" 
+            value={userQuery} 
+            onChange={(e) => setUserQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && userQuery.trim() && !loading) {
+                fetchInsights(false, undefined, userQuery);
+              }
+            }}
+          />
+          <button onClick={() => fetchInsights(false, undefined, userQuery)} disabled={loading || !userQuery.trim()} className="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-xl text-sm font-semibold transition flex items-center gap-2 whitespace-nowrap border border-blue-500 shadow-lg disabled:opacity-50">
+            {loading ? "Processing..." : <><Sparkles size={16}/> Execute Deep Analysis</>}
+          </button>
+        </div>
       </div>
 
       {/* Primary Metrics Grid */}
