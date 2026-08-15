@@ -9,7 +9,7 @@ import {
 import { 
   ShieldCheck, Sparkles, Plus, Trash2, ArrowLeft, TrendingUp, 
   PieChart as PieIcon, CheckCircle2, AlertTriangle, FileText, 
-  Upload, FileSpreadsheet, Newspaper, Send, CornerDownLeft
+  Upload, FileSpreadsheet, Newspaper, Send, Compass
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -59,7 +59,6 @@ export default function Dashboard() {
     setHoldings(newHoldings);
   };
 
-  // CSV Parsing Logic
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -173,7 +172,7 @@ export default function Dashboard() {
       }
       
     } catch (error) {
-      setErrorMsg("Unable to connect to backend server. Please verify NEXT_PUBLIC_BACKEND_URL is set in Vercel.");
+      setErrorMsg("Unable to connect to backend server. Please verify backend URL configurations.");
     }
     setLoading(false);
   };
@@ -201,7 +200,7 @@ export default function Dashboard() {
       await fetchInsights(false, result.user.uid);
     } catch (error: any) {
       console.error(error);
-      setErrorMsg("Failed to sign in. " + error.message);
+      setErrorMsg("Failed to sign in: " + error.message);
       setLoading(false);
     }
   };
@@ -227,9 +226,9 @@ export default function Dashboard() {
               <Sparkles size={28} />
             </div>
             <h1 className="text-3xl font-extrabold bg-gradient-to-r from-blue-400 via-teal-300 to-purple-500 bg-clip-text text-transparent">
-              Zerodha AI Platform
+              Financial AI Terminal
             </h1>
-            <p className="text-slate-400 text-sm">PowerBI Financial Intelligence & Forecasting</p>
+            <p className="text-slate-400 text-sm">Enterprise Financial Intelligence & Portfolio Analytics</p>
           </div>
           <div className="space-y-4 pt-4">
             <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700/50 space-y-4">
@@ -258,7 +257,7 @@ export default function Dashboard() {
     );
   }
 
-  // --- SCREEN 2: PORTFOLIO CREATION (WITH CSV) ---
+  // --- SCREEN 2: PORTFOLIO CREATION ---
   if (currentView === "input") {
     return (
       <div className="min-h-screen bg-slate-950 text-white relative p-6 md:p-12 overflow-x-hidden bg-cover bg-center" style={{ backgroundImage: `linear-gradient(to bottom, rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.98)), url('https://i.pinimg.com/736x/79/68/74/7968740973b0b6dd1b4668fdae827ad7.jpg')` }}>
@@ -315,7 +314,7 @@ export default function Dashboard() {
             {errorMsg && <p className="text-red-400 text-sm font-bold bg-red-500/10 p-3 rounded-lg border border-red-500/20 text-center mt-6">{errorMsg}</p>}
             
             <button onClick={() => { setUserQuery(""); fetchInsights(true); }} disabled={loading} className="w-full mt-6 bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-400 hover:to-blue-500 text-white py-3.5 rounded-xl font-bold transition shadow-lg shadow-teal-500/20 disabled:opacity-50 border border-teal-400/30">
-              {loading ? "Running Financial Analytics..." : "Generate PowerBI Dashboard"}
+              {loading ? "Running Financial Analytics..." : "Generate Analytics Dashboard"}
             </button>
           </div>
         </div>
@@ -324,21 +323,21 @@ export default function Dashboard() {
   }
 
   // Extract variables with fallbacks
-  const { summary, sector_data, historical_chart = [], predictive_chart, live_news = [], automated_alerts = [] } = analyticsData || {};
+  const { summary, sector_data, historical_chart = [], predictive_chart = [], stock_comparison = [], live_news = [], automated_alerts = [] } = analyticsData || {};
 
-  // --- SCREEN 3: CONTINUOUS AI CHAT & REPORT VIEW ---
+  // --- SCREEN 3: INTERACTIVE AI STRATEGY VIEW ---
   if (currentView === "query_response") {
     return (
       <div className="min-h-screen text-slate-100 p-4 md:p-8 space-y-6 font-sans bg-cover bg-center bg-fixed flex flex-col justify-between" style={{ backgroundImage: `linear-gradient(to bottom, rgba(2, 6, 23, 0.88), rgba(2, 6, 23, 0.96)), url('https://i.pinimg.com/736x/79/68/74/7968740973b0b6dd1b4668fdae827ad7.jpg')` }}>
         
-        {/* Sticky Header */}
+        {/* Header */}
         <div className="flex items-center justify-between bg-slate-900/70 backdrop-blur-xl p-4 md:p-5 rounded-2xl border border-slate-700/50 shadow-xl sticky top-4 z-20">
           <button onClick={() => { setUserQuery(""); setCurrentView("analytics"); }} className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm font-semibold bg-blue-500/10 px-4 py-2 rounded-xl border border-blue-500/20 transition backdrop-blur-md">
             <ArrowLeft size={16}/> Back to Main Terminal
           </button>
           <div className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-widest hidden sm:inline">Zerodha AI Assistant</span>
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-widest hidden sm:inline">Financial AI Assistant</span>
             <span className="font-mono text-xs text-slate-400 bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800">{auth.currentUser?.email}</span>
           </div>
         </div>
@@ -360,14 +359,14 @@ export default function Dashboard() {
               <div className="flex justify-end">
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 md:p-5 rounded-2xl rounded-tr-none shadow-lg max-w-2xl border border-blue-400/30">
                   <p className="text-xs text-blue-200 font-bold uppercase tracking-wider mb-1 flex items-center justify-between gap-4">
-                    <span>Your Query</span>
+                    <span>Your Analytical Query</span>
                     <span className="text-[10px] opacity-75">{item.timestamp}</span>
                   </p>
                   <p className="text-base md:text-lg font-semibold">{item.query}</p>
                 </div>
               </div>
 
-              {/* AI Report Card / Response */}
+              {/* AI Report Card */}
               <div className="bg-slate-900/70 backdrop-blur-xl p-6 md:p-10 rounded-2xl border border-slate-700/60 shadow-2xl space-y-8">
                 {item.aiData?.type === "detailed" ? (
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -409,7 +408,7 @@ export default function Dashboard() {
                         </h3>
                         <div className="h-64">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={analyticsData?.stock_comparison || []}>
+                            <BarChart data={stock_comparison || []}>
                               <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false}/>
                               <XAxis dataKey="symbol" stroke="#94A3B8" tick={{fontSize: 11}}/>
                               <YAxis stroke="#94A3B8" tick={{fontSize: 11}} tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`}/>
@@ -434,7 +433,7 @@ export default function Dashboard() {
                     <div className="bg-blue-500/10 p-3 rounded-full border border-blue-500/20 mb-4">
                       <Sparkles size={28} className="text-blue-400" />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">Standard AI Insight</h3>
+                    <h3 className="text-xl font-bold text-white mb-2">Standard Intelligence Insight</h3>
                     <p className="text-base text-slate-300 leading-relaxed max-w-2xl">{item.aiData?.insight}</p>
                   </div>
                 )}
@@ -453,7 +452,7 @@ export default function Dashboard() {
           <div ref={chatEndRef} />
         </div>
 
-        {/* Floating Interactive Input Bar (Chatbot Style) */}
+        {/* Floating Input Bar */}
         <div className="fixed bottom-4 left-0 right-0 max-w-4xl mx-auto px-4 z-30">
           <form 
             onSubmit={(e) => {
@@ -494,7 +493,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-700/50 shadow-xl gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-teal-300 bg-clip-text text-transparent">PowerBI Analytics Terminal</h1>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-teal-300 bg-clip-text text-transparent">Financial Analytics Terminal</h1>
             <span className="bg-blue-500/20 text-blue-400 text-xs px-2.5 py-1 rounded-full border border-blue-500/30 font-semibold backdrop-blur-sm">Live Feed</span>
           </div>
           <p className="text-slate-300 text-xs mt-1">Authenticated as: <span className="text-white font-mono">{auth.currentUser?.email}</span></p>
@@ -529,8 +528,6 @@ export default function Dashboard() {
 
       {/* Query Bar */}
       <div className="space-y-4">
-        
-        {/* Missing Error Display added here! */}
         {errorMsg && (
           <div className="bg-red-950/50 border border-red-500/50 text-red-200 p-4 rounded-xl flex items-center gap-3 backdrop-blur-md">
             <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
@@ -577,7 +574,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Main Charts */}
+      {/* Main Charts Row 1 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-700/50 shadow-lg space-y-4">
           <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2"><TrendingUp size={18} className="text-blue-400"/> Chart 1: 30-Day Portfolio Performance</h3>
@@ -627,33 +624,96 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Live News Feed Section */}
-      <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-700/50 shadow-lg">
-        <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2 mb-6"><Newspaper size={18} className="text-purple-400"/> Live Market Intelligence</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {live_news.length > 0 ? (
-            live_news.map((news: any, index: number) => (
-              <a 
-                key={index} 
-                href={news.link} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block p-4 bg-slate-950/50 hover:bg-slate-800/80 transition-colors rounded-xl border border-slate-700/50 group h-full shadow-inner"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <span className="text-[10px] font-bold px-2 py-1 bg-blue-900/40 text-blue-300 rounded border border-blue-700/30 uppercase tracking-wider">
-                    {news.symbol}
-                  </span>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wide truncate max-w-[50%] text-right">{news.publisher}</span>
-                </div>
-                <p className="text-sm font-medium text-slate-200 group-hover:text-blue-400 transition-colors line-clamp-3 leading-snug">
-                  {news.title}
-                </p>
-              </a>
-            ))
-          ) : (
-            <p className="text-sm text-slate-500 col-span-full">No recent market news available for your currently tracked holdings.</p>
-          )}
+      {/* Main Charts Row 2 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-700/50 shadow-lg space-y-4">
+          <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2"><Sparkles size={18} className="text-purple-400"/> Chart 3: 6-Month AI Predictive Trajectory</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={predictive_chart}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false}/>
+                <XAxis dataKey="month" stroke="#94A3B8" tick={{fontSize: 11}}/>
+                <YAxis stroke="#94A3B8" tick={{fontSize: 11}} tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`}/>
+                <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '8px' }}/>
+                <Legend verticalAlign="bottom" height={36} wrapperStyle={{fontSize: '12px', color: '#F8FAFC'}}/>
+                <Line type="monotone" dataKey="optimistic" stroke="#10B981" name="Optimistic (+5%)" strokeDasharray="5 5" />
+                <Line type="monotone" dataKey="baseline" stroke="#3B82F6" name="Baseline CAGR" strokeWidth={3} />
+                <Line type="monotone" dataKey="pessimistic" stroke="#EF4444" name="Pessimistic (-4%)" strokeDasharray="5 5" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-700/50 shadow-lg space-y-4">
+          <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2"><FileText size={18} className="text-emerald-400"/> Chart 4: Asset Value Distribution</h3>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stock_comparison || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false}/>
+                <XAxis dataKey="symbol" stroke="#94A3B8" tick={{fontSize: 11}}/>
+                <YAxis stroke="#94A3B8" tick={{fontSize: 11}} tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`}/>
+                <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '8px' }}/>
+                <Legend verticalAlign="bottom" height={36} wrapperStyle={{fontSize: '12px', color: '#F8FAFC'}}/>
+                <Bar dataKey="invested" fill="#3B82F6" name="Invested Capital" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="current" fill="#10B981" name="Current Value" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Live Market Intelligence & AI Recommendations Box */}
+      <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl border border-slate-700/50 shadow-lg mb-8">
+        <div className="flex items-center gap-2 mb-6">
+          <Newspaper size={20} className="text-purple-400"/>
+          <h3 className="text-lg font-bold text-slate-100">Live Market Intelligence & Strategic Actions</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column: News Feed */}
+          <div className="lg:col-span-2 space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+            {live_news.length > 0 ? (
+              live_news.map((news: any, index: number) => (
+                <a 
+                  key={index} 
+                  href={news.link} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="block p-4 bg-slate-950/50 hover:bg-slate-800/80 transition-colors rounded-xl border border-slate-700/50 group shadow-inner"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] font-bold px-2 py-1 bg-blue-900/40 text-blue-300 rounded border border-blue-700/30 uppercase tracking-wider">
+                      {news.symbol}
+                    </span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wide truncate max-w-[50%] text-right">{news.publisher}</span>
+                  </div>
+                  <p className="text-sm font-medium text-slate-200 group-hover:text-blue-400 transition-colors">
+                    {news.title}
+                  </p>
+                </a>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">No recent market news available for your currently tracked holdings.</p>
+            )}
+          </div>
+
+          {/* Right Column: AI Strategic Actions */}
+          <div className="bg-emerald-950/20 border border-emerald-900/50 rounded-xl p-5 shadow-inner flex flex-col">
+            <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Compass size={16} /> Market Strategic Signals
+            </h4>
+            <div className="space-y-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              {aiData?.recommendations && aiData.recommendations.length > 0 ? (
+                aiData.recommendations.map((rec: string, idx: number) => (
+                  <div key={idx} className="flex items-start gap-2 border-l-2 border-emerald-500 pl-3">
+                    <p className="text-xs text-slate-300 leading-relaxed">{rec}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-slate-500 italic">Execute deep analysis to trigger real-time strategic recommendations.</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
