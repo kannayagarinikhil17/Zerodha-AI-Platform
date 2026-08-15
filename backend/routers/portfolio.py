@@ -79,7 +79,7 @@ def generate_ai_insights(portfolio_df: pd.DataFrame, user_query: str):
     """
 
     # Using the most current and stable model endpoint names
-    models_to_try = ['gemini-1.5-flash', 'gemini-pro', 'gemini-1.0-pro']
+    models_to_try = ['gemini-3.7-flash', 'gemini-3.5-flash']
     client = genai.Client(api_key=GEMINI_API_KEY)
 
     for model_name in models_to_try:
